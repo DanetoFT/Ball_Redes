@@ -9,15 +9,24 @@ public class PlayerPickup : NetworkBehaviour
     public float throwForce = 15f;
     public LayerMask ballLayer; // Asigna esto a una capa donde esté solo la pelota
 
+    private bool isGrabbed = false;
+
     [Header("Teclas")]
     public KeyCode grabKey = KeyCode.E;
     public KeyCode throwKey = KeyCode.Mouse0;
 
     private NetworkObject heldObject;
 
+    public PauseMenuManager referencePauseMenu;
+
     void Update()
     {
         if (!IsOwner) return;
+
+        /*if (referencePauseMenu.isPaused)
+        {
+            return;
+        }*/
 
         if (heldObject == null)
         {
@@ -29,6 +38,7 @@ public class PlayerPickup : NetworkBehaviour
         }
         else
         {
+            heldObject.transform.position = holdPoint.transform.position;
             // Intentar lanzar
             if (Input.GetKeyDown(throwKey))
             {
@@ -89,7 +99,7 @@ public class PlayerPickup : NetworkBehaviour
                 // Forzamos la posición local a cero para que se pegue al HoldPoint
                 ballNetObj.transform.localPosition = Vector3.zero;
                 ballNetObj.transform.localRotation = Quaternion.identity;
-            }
+}
             else
             {
                 Debug.LogError($"Fallo al emparentar la pelota. ¿Tiene el Player un NetworkObject activo? ID: {OwnerClientId}");
@@ -131,12 +141,20 @@ public class PlayerPickup : NetworkBehaviour
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(netId, out NetworkObject obj))
         {
             heldObject = obj;
+
+            SphereCollider ballCol = heldObject.GetComponent<SphereCollider>();
+            ballCol.isTrigger = true;
+            isGrabbed = true;
         }
     }
 
     [ClientRpc]
     void ClearHeldObjectClientRpc()
     {
+        SphereCollider ballCol = heldObject.GetComponent<SphereCollider>();
+
+        ballCol.isTrigger = false;
         heldObject = null;
+        isGrabbed = false;
     }
 }

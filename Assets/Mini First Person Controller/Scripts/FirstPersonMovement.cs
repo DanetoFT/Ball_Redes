@@ -17,6 +17,14 @@ public class FirstPersonMovement : NetworkBehaviour
     // 👇 VUELVE ESTO
     public List<System.Func<float>> speedOverrides = new();
 
+
+    public override void OnNetworkSpawn()
+    {
+        Debug.Log(
+            $"Spawned | IsOwner: {IsOwner} | IsServer: {IsServer} | ClientId: {OwnerClientId}"
+        );
+    }
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -53,11 +61,5 @@ public class FirstPersonMovement : NetworkBehaviour
         );
     }
 
-    public override void OnNetworkSpawn()
-    {
-        Debug.Log(
-            $"Spawned | IsOwner: {IsOwner} | IsServer: {IsServer} | ClientId: {OwnerClientId}"
-        );
-    }
 
 }
