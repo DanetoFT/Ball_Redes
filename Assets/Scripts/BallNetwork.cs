@@ -3,13 +3,26 @@ using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
 
-public class NetworkBall : NetworkBehaviour
+
+public class BallNetwork : NetworkBehaviour
 {
-    Rigidbody rb;
-    public float voidYThreshold = -10f; // Altura a la que se considera "vacío"
-    private ulong lastOwnerId;
-    private bool isRespawning = false;
+    private Rigidbody rb;
     private NetworkObject netObj;
+
+    [Header("Respawn")]
+    public float voidYThreshold = -10f;
+
+    private bool isRespawning = false;
+    private ulong lastOwnerId;
+
+    [Header("Hold")]
+    public NetworkVariable<bool> isHeld = new NetworkVariable<bool>(
+        false,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
+
+    private Transform followTarget;
 
     void Awake()
     {
@@ -19,7 +32,6 @@ public class NetworkBall : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // El servidor inicializa el ID del dueño (por defecto el host o nadie)
         if (IsServer)
         {
             lastOwnerId = NetworkManager.Singleton.LocalClientId;
@@ -28,19 +40,57 @@ public class NetworkBall : NetworkBehaviour
 
     void Update()
     {
-        // Solo el servidor vigila si la pelota cae al vacío
         if (!IsServer) return;
 
-        // Si la pelota cae muy bajo y no está siendo sostenida (tiene padre) ni está respawneando
-        if (transform.position.y < voidYThreshold && transform.parent == null && !isRespawning)
+        // Si está en la mano de un jugador, seguir el HoldPoint
+        if (isHeld.Value && followTarget != null)
+        {
+            rb.MovePosition(followTarget.position);
+            rb.MoveRotation(followTarget.rotation);
+            return;
+        }
+
+        // Respawn si cae al vacío
+        if (transform.position.y < voidYThreshold && !isRespawning)
         {
             StartCoroutine(RespawnRoutine());
         }
     }
 
-    // Método llamado por el Player cuando la agarra
+    public void Hold(Transform target)
+    {
+        if (!IsServer) return;
+
+        followTarget = target;
+        isHeld.Value = true;
+
+        rb.isKinematic = true;
+        rb.useGravity = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        if (TryGetComponent(out Collider col))
+            col.enabled = false;
+    }
+
+    public void Release(Vector3 throwForce)
+    {
+        if (!IsServer) return;
+
+        isHeld.Value = false;
+        followTarget = null;
+
+        if (TryGetComponent(out Collider col))
+            col.enabled = true;
+
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.AddForce(throwForce, ForceMode.Impulse);
+    }
+
     public void SetLastOwner(ulong clientId)
     {
+        if (!IsServer) return;
         lastOwnerId = clientId;
     }
 
@@ -48,7 +98,6 @@ public class NetworkBall : NetworkBehaviour
     {
         isRespawning = true;
 
-        // 1. Detener físicas por completo
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
@@ -56,40 +105,28 @@ public class NetworkBall : NetworkBehaviour
         yield return new WaitForSeconds(2f);
 
         Vector3 targetPosition;
-        // 2. Definir rotación limpia (sin rotación)
         Quaternion targetRotation = Quaternion.identity;
 
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client))
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client)
+            && client.PlayerObject != null)
         {
-            if (client.PlayerObject != null)
-            {
-                // Posición: 2 metros sobre el jugador
-                targetPosition = client.PlayerObject.transform.position + Vector3.up * 2f;
-            }
-            else
-            {
-                targetPosition = new Vector3(0, 5, 0);
-            }
+            targetPosition = client.PlayerObject.transform.position + Vector3.up * 2f;
         }
         else
         {
             targetPosition = new Vector3(0, 5, 0);
         }
 
-        // 3. TELETRANSPORTE OFICIAL (Esto evita el "desplazamiento" extraño)
         if (TryGetComponent(out NetworkTransform netTransform))
         {
-            // Teleport es la forma correcta de mover objetos con NetworkTransform instantáneamente
             netTransform.Teleport(targetPosition, targetRotation, transform.localScale);
         }
         else
         {
-            // Si por alguna razón no tienes NetworkTransform, el cambio manual:
             transform.position = targetPosition;
             transform.rotation = targetRotation;
         }
 
-        // 4. Reactivar físicas
         rb.isKinematic = false;
         isRespawning = false;
     }

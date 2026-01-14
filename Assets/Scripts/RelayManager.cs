@@ -13,7 +13,9 @@ public class RelayManager : MonoBehaviour
 {
     public TMP_Text roomCodeText;
     public TMP_InputField roomCodeInput;
-    
+
+    MainMenuManager mainMenu;
+
 
     async void Start()
     {
@@ -21,7 +23,11 @@ public class RelayManager : MonoBehaviour
 
         NetworkManager.Singleton.OnClientStopped += ResetRoomCodeText;
         await UnityServices.InitializeAsync();
-        await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        if (!AuthenticationService.Instance.IsSignedIn)
+        {
+            await AuthenticationService.Instance.SignInAnonymouslyAsync();
+        }
+        mainMenu = FindAnyObjectByType<MainMenuManager>();
     }
 
     private void ResetRoomCodeText(bool obj)
@@ -32,8 +38,15 @@ public class RelayManager : MonoBehaviour
     public async void CreateRoom()
     {
         string joinCode = await StartHostWithRelay();
-        roomCodeText.text = joinCode;
-        Debug.Log(roomCodeText.text);
+
+        if (!string.IsNullOrEmpty(joinCode))
+        {
+            // Opción 1: Usar el singleton (recomendado)
+            if (DontDestroyCode.Singleton != null && DontDestroyCode.Singleton.text != null)
+            {
+                DontDestroyCode.Singleton.text.text = joinCode;
+            }
+        }
     }
 
     public async void JoinRoom()

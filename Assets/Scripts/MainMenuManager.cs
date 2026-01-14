@@ -65,6 +65,15 @@ public class MainMenuManager : MonoBehaviour
         }
     }
 
+    public void UpdateRoomCode(string code)
+    {
+        if (informationText != null)
+        {
+            informationText.text = "Room Code: " + code;
+        }
+    }
+
+
     public void Disconnect()
     {
         NetworkManager.Singleton.Shutdown();
