@@ -31,12 +31,10 @@ public class FirstPersonLook : NetworkBehaviour
         float mouseX = Input.GetAxis("Mouse X") * sensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * sensitivity;
 
-        // rotación vertical (cámara)
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, minY, maxY);
         transform.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
 
-        // rotación horizontal (player)
         player.Rotate(Vector3.up * mouseX);
     }
 }

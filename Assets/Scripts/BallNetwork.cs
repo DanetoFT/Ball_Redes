@@ -14,6 +14,14 @@ public class BallNetwork : NetworkBehaviour
     private bool isRespawning = false;
     private ulong lastOwnerId;
 
+    [Header("Posición Respawn")]
+    public float respawnForwardDistance = 1.5f;
+    [SerializeField] private LayerMask groundMask = -1;
+    [SerializeField] private float raycastHeight = 10f;
+    [SerializeField] private float raycastMaxDistance = 20f;
+    [SerializeField] private float spawnAboveGroundOffset = 0.1f;
+    public float fallbackHeight = 2f;
+
     [Header("Hold")]
     public NetworkVariable<bool> isHeld = new NetworkVariable<bool>(
         false,
@@ -21,10 +29,6 @@ public class BallNetwork : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
     private Transform followTarget;
-
-    [Header("Posición Respawn")]
-    public float respawnForwardDistance = 1.5f;
-    public float respawnHeight = 1.5f;
 
     void Awake()
     {
@@ -97,30 +101,75 @@ public class BallNetwork : NetworkBehaviour
 
         yield return new WaitForSeconds(tiempoRespawn);
 
-        Vector3 targetPosition;
-        Quaternion targetRotation = Quaternion.identity;
+        Vector3 targetPosition = new Vector3(0, 5, 0); // fallback final
+        bool success = false;
+        ulong usedId = lastOwnerId;
 
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client)
-            && client.PlayerObject != null)
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client))
         {
-            Transform playerTransform = client.PlayerObject.transform;
-            targetPosition = playerTransform.position +
-                             playerTransform.forward * respawnForwardDistance +
-                             Vector3.up * respawnHeight;
+            // Chequeo más seguro: PlayerObject existe y está spawned
+            if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
+            {
+                success = true;
+            }
+            else
+            {
+                Debug.LogWarning($"[Ball] Cliente {lastOwnerId} encontrado pero PlayerObject es NULL o no spawned");
+            }
         }
         else
         {
-            targetPosition = new Vector3(0, 5, 0);
+            Debug.LogWarning($"[Ball] No se encontró cliente con ID {lastOwnerId}");
         }
 
+        // Si falló con el último dueño → elige cualquier jugador vivo (incluye Host)
+        if (!success)
+        {
+            foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
+            {
+                client = kvp.Value;
+                if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
+                {
+                    usedId = kvp.Key;
+                    success = true;
+                    break;
+                }
+            }
+        }
+
+        if (success)
+        {
+            Transform playerT = client.PlayerObject.transform;
+
+            Vector3 rayOrigin = playerT.position +
+                               playerT.forward * respawnForwardDistance +
+                               Vector3.up * raycastHeight;
+
+            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastMaxDistance, groundMask))
+            {
+                targetPosition = hit.point + Vector3.up * spawnAboveGroundOffset;
+            }
+            else
+            {
+                targetPosition = playerT.position + Vector3.up * fallbackHeight;
+            }
+
+            Debug.Log($"[Ball Respawn] ÉXITO - Cerca de jugador {usedId} {(usedId == lastOwnerId ? "(último)" : "(fallback otro)")}");
+        }
+        else
+        {
+            Debug.LogWarning("[Ball Respawn] FALLBACK centro: NO hay jugadores vivos con PlayerObject válido");
+        }
+
+        // Teleport
         if (TryGetComponent(out NetworkTransform netTransform))
         {
-            netTransform.Teleport(targetPosition, targetRotation, transform.localScale);
+            netTransform.Teleport(targetPosition, Quaternion.identity, transform.localScale);
         }
         else
         {
             transform.position = targetPosition;
-            transform.rotation = targetRotation;
+            transform.rotation = Quaternion.identity;
         }
 
         rb.isKinematic = false;

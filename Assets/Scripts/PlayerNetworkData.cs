@@ -14,13 +14,11 @@ public class PlayerNetworkData : NetworkBehaviour
 
     public override void OnNetworkSpawn()
     {
-        // Si soy el dueño ? seteo mi nombre
         if (IsOwner)
         {
             playerName.Value = UserListManager.Singleton.localUserName;
         }
 
-        // No me veo a mí mismo
         if (IsOwner)
         {
             nameTagRoot.SetActive(false);
