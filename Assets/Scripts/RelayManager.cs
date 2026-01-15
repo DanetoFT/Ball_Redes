@@ -41,7 +41,6 @@ public class RelayManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(joinCode))
         {
-            // Opción 1: Usar el singleton (recomendado)
             if (DontDestroyCode.Singleton != null && DontDestroyCode.Singleton.text != null)
             {
                 DontDestroyCode.Singleton.text.text = joinCode;

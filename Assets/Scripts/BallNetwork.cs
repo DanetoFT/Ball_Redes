@@ -1,8 +1,7 @@
-using System.Collections;
+ï»¿using System.Collections;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
-
 
 public class BallNetwork : NetworkBehaviour
 {
@@ -11,7 +10,7 @@ public class BallNetwork : NetworkBehaviour
 
     [Header("Respawn")]
     public float voidYThreshold = -10f;
-
+    public float tiempoRespawn = 2f;
     private bool isRespawning = false;
     private ulong lastOwnerId;
 
@@ -21,8 +20,11 @@ public class BallNetwork : NetworkBehaviour
         NetworkVariableReadPermission.Everyone,
         NetworkVariableWritePermission.Server
     );
-
     private Transform followTarget;
+
+    [Header("PosiciÃ³n Respawn")]
+    public float respawnForwardDistance = 1.5f;
+    public float respawnHeight = 1.5f;
 
     void Awake()
     {
@@ -42,7 +44,6 @@ public class BallNetwork : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // Si está en la mano de un jugador, seguir el HoldPoint
         if (isHeld.Value && followTarget != null)
         {
             rb.MovePosition(followTarget.position);
@@ -50,7 +51,6 @@ public class BallNetwork : NetworkBehaviour
             return;
         }
 
-        // Respawn si cae al vacío
         if (transform.position.y < voidYThreshold && !isRespawning)
         {
             StartCoroutine(RespawnRoutine());
@@ -60,15 +60,12 @@ public class BallNetwork : NetworkBehaviour
     public void Hold(Transform target)
     {
         if (!IsServer) return;
-
         followTarget = target;
         isHeld.Value = true;
-
         rb.isKinematic = true;
         rb.useGravity = false;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-
         if (TryGetComponent(out Collider col))
             col.enabled = false;
     }
@@ -76,13 +73,10 @@ public class BallNetwork : NetworkBehaviour
     public void Release(Vector3 throwForce)
     {
         if (!IsServer) return;
-
         isHeld.Value = false;
         followTarget = null;
-
         if (TryGetComponent(out Collider col))
             col.enabled = true;
-
         rb.isKinematic = false;
         rb.useGravity = true;
         rb.AddForce(throwForce, ForceMode.Impulse);
@@ -97,12 +91,11 @@ public class BallNetwork : NetworkBehaviour
     private IEnumerator RespawnRoutine()
     {
         isRespawning = true;
-
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
         rb.isKinematic = true;
 
-        yield return new WaitForSeconds(2f);
+        yield return new WaitForSeconds(tiempoRespawn);
 
         Vector3 targetPosition;
         Quaternion targetRotation = Quaternion.identity;
@@ -110,7 +103,10 @@ public class BallNetwork : NetworkBehaviour
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client)
             && client.PlayerObject != null)
         {
-            targetPosition = client.PlayerObject.transform.position + Vector3.up * 2f;
+            Transform playerTransform = client.PlayerObject.transform;
+            targetPosition = playerTransform.position +
+                             playerTransform.forward * respawnForwardDistance +
+                             Vector3.up * respawnHeight;
         }
         else
         {

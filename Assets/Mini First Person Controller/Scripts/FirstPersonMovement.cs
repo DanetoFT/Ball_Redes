@@ -14,7 +14,6 @@ public class FirstPersonMovement : NetworkBehaviour
 
     public bool IsRunning { get; private set; }
 
-    // 👇 VUELVE ESTO
     public List<System.Func<float>> speedOverrides = new();
 
 
@@ -42,7 +41,6 @@ public class FirstPersonMovement : NetworkBehaviour
         IsRunning = Input.GetKey(runningKey);
         float currentSpeed = IsRunning ? runSpeed : speed;
 
-        // 👇 aplica override si existe
         if (speedOverrides.Count > 0)
         {
             currentSpeed = speedOverrides[^1]();

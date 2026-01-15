@@ -7,14 +7,14 @@ public class DontDestroyCode : MonoBehaviour
     private static DontDestroyCode singleton;
     public static DontDestroyCode Singleton => singleton;
 
-    public TMP_Text text;  // ← Este es el texto que muestra el código de sala
+    public TMP_Text text;
 
     private void Awake()
     {
         if (singleton == null)
         {
             singleton = this;
-            DontDestroyOnLoad(this.gameObject);  // ← ¡Aquí es el lugar correcto!
+            DontDestroyOnLoad(this.gameObject);
         }
         else
         {
@@ -22,7 +22,6 @@ public class DontDestroyCode : MonoBehaviour
         }
     }
 
-    // Opcional: limpiar el texto al desconectarse
     private void OnEnable()
     {
         if (NetworkManager.Singleton != null)
@@ -42,6 +41,6 @@ public class DontDestroyCode : MonoBehaviour
     private void OnClientStopped(bool _)
     {
         if (text != null)
-            text.text = "- -";   // o "" si prefieres
+            text.text = "- -";
     }
 }
