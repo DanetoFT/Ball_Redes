@@ -230,7 +230,8 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   voidYThreshold: -10
   tiempoRespawn: 2
-  respawnForwardDistance: 1.5
+  inactivityTimeout: 7
+  respawnForwardDistance: 4
   groundMask:
     serializedVersion: 2
     m_Bits: 136

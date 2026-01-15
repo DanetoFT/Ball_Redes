@@ -52,18 +52,28 @@ public class SimpleNetworkCharacterSpawner : NetworkBehaviour
         if (spawnPoints != null && spawnPoints.Count > 0)
         {
             int index = playerSpawned.Count % spawnPoints.Count;
-
             spawnPos = spawnPoints[index].position;
             spawnRot = spawnPoints[index].rotation;
         }
         else
         {
-            Debug.LogWarning("No hay Spawn Points asignados en el Spawner. Usando Vector3.zero");
+            Debug.LogWarning("No hay Spawn Points asignados. Usando Vector3.zero");
         }
-        NetworkObject newPlayerSpawned = Instantiate(playerToSpawn, spawnPos, spawnRot);
 
-        newPlayerSpawned.SpawnWithOwnership(ownerPlayerID);
-        playerSpawned.Add(newPlayerSpawned);
-        newPlayerSpawned.DestroyWithScene = true;
+        NetworkObject newPlayer = Instantiate(playerToSpawn, spawnPos, spawnRot);
+
+        newPlayer.SpawnWithOwnership(ownerPlayerID);
+
+        if (NetworkManager.Singleton.ConnectedClients.ContainsKey(ownerPlayerID))
+        {
+            NetworkManager.Singleton.ConnectedClients[ownerPlayerID].PlayerObject = newPlayer;
+        }
+        else
+        {
+            Debug.LogWarning($"No se encontró ConnectedClients[{ownerPlayerID}] al spawnear jugador");
+        }
+
+        playerSpawned.Add(newPlayer);
+        newPlayer.DestroyWithScene = true;
     }
 }

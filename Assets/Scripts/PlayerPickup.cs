@@ -65,6 +65,7 @@ public class PlayerPickup : NetworkBehaviour
 
         heldObject = ballNetObj;
         SetHeldObjectClientRpc(networkObjectId);
+
     }
 
     [ServerRpc]

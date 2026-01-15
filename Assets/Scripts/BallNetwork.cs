@@ -8,11 +8,15 @@ public class BallNetwork : NetworkBehaviour
     private Rigidbody rb;
     private NetworkObject netObj;
 
-    [Header("Respawn")]
+    [Header("Respawn por Vacío")]
     public float voidYThreshold = -10f;
     public float tiempoRespawn = 2f;
     private bool isRespawning = false;
     private ulong lastOwnerId;
+
+    [Header("Respawn por Inactividad")]
+    public float inactivityTimeout = 10f;     // ← NUEVO: Tiempo sin tocarla para respawn auto
+    private float lastActivityTime;           // ← NUEVO: Última vez que se Hold/Release
 
     [Header("Posición Respawn")]
     public float respawnForwardDistance = 1.5f;
@@ -41,6 +45,7 @@ public class BallNetwork : NetworkBehaviour
         if (IsServer)
         {
             lastOwnerId = NetworkManager.Singleton.LocalClientId;
+            lastActivityTime = Time.time;  // ← Inicial
         }
     }
 
@@ -48,6 +53,7 @@ public class BallNetwork : NetworkBehaviour
     {
         if (!IsServer) return;
 
+        // Si está sostenida, seguir
         if (isHeld.Value && followTarget != null)
         {
             rb.MovePosition(followTarget.position);
@@ -55,9 +61,18 @@ public class BallNetwork : NetworkBehaviour
             return;
         }
 
+        // ← PRIORIDAD 1: Respawn por vacío (como antes)
         if (transform.position.y < voidYThreshold && !isRespawning)
         {
-            StartCoroutine(RespawnRoutine());
+            StartCoroutine(RespawnRoutine("Vacío"));
+            return;
+        }
+
+        // ← NUEVO: PRIORIDAD 2: Respawn por inactividad
+        if (!isHeld.Value && Time.time - lastActivityTime > inactivityTimeout && !isRespawning)
+        {
+            StartCoroutine(RespawnRoutine("Inactividad"));
+            return;
         }
     }
 
@@ -72,6 +87,8 @@ public class BallNetwork : NetworkBehaviour
         rb.angularVelocity = Vector3.zero;
         if (TryGetComponent(out Collider col))
             col.enabled = false;
+
+        lastActivityTime = Time.time;  // ← RESET TIMER
     }
 
     public void Release(Vector3 throwForce)
@@ -84,6 +101,8 @@ public class BallNetwork : NetworkBehaviour
         rb.isKinematic = false;
         rb.useGravity = true;
         rb.AddForce(throwForce, ForceMode.Impulse);
+
+        lastActivityTime = Time.time;  // ← RESET TIMER
     }
 
     public void SetLastOwner(ulong clientId)
@@ -92,7 +111,8 @@ public class BallNetwork : NetworkBehaviour
         lastOwnerId = clientId;
     }
 
-    private IEnumerator RespawnRoutine()
+    // ← MEJORADO: RespawnRoutine con parámetro para log (opcional)
+    private IEnumerator RespawnRoutine(string reason = "Desconocido")
     {
         isRespawning = true;
         rb.linearVelocity = Vector3.zero;
@@ -101,36 +121,28 @@ public class BallNetwork : NetworkBehaviour
 
         yield return new WaitForSeconds(tiempoRespawn);
 
-        Vector3 targetPosition = new Vector3(0, 5, 0); // fallback final
-        bool success = false;
+        Vector3 targetPosition = new Vector3(0, 5, 0);
         ulong usedId = lastOwnerId;
+        bool success = false;
+        NetworkClient client = null;
 
-        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out NetworkClient client))
+        if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out client))
         {
-            // Chequeo más seguro: PlayerObject existe y está spawned
             if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
             {
                 success = true;
             }
-            else
-            {
-                Debug.LogWarning($"[Ball] Cliente {lastOwnerId} encontrado pero PlayerObject es NULL o no spawned");
-            }
-        }
-        else
-        {
-            Debug.LogWarning($"[Ball] No se encontró cliente con ID {lastOwnerId}");
         }
 
-        // Si falló con el último dueño → elige cualquier jugador vivo (incluye Host)
         if (!success)
         {
             foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
             {
-                client = kvp.Value;
-                if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
+                NetworkClient tempClient = kvp.Value;
+                if (tempClient.PlayerObject != null && tempClient.PlayerObject.IsSpawned)
                 {
                     usedId = kvp.Key;
+                    client = tempClient;
                     success = true;
                     break;
                 }
@@ -140,10 +152,7 @@ public class BallNetwork : NetworkBehaviour
         if (success)
         {
             Transform playerT = client.PlayerObject.transform;
-
-            Vector3 rayOrigin = playerT.position +
-                               playerT.forward * respawnForwardDistance +
-                               Vector3.up * raycastHeight;
+            Vector3 rayOrigin = playerT.position + playerT.forward * respawnForwardDistance + Vector3.up * raycastHeight;
 
             if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastMaxDistance, groundMask))
             {
@@ -154,11 +163,11 @@ public class BallNetwork : NetworkBehaviour
                 targetPosition = playerT.position + Vector3.up * fallbackHeight;
             }
 
-            Debug.Log($"[Ball Respawn] ÉXITO - Cerca de jugador {usedId} {(usedId == lastOwnerId ? "(último)" : "(fallback otro)")}");
+            Debug.Log($"[Ball Respawn {reason}] ÉXITO cerca de {usedId}");
         }
         else
         {
-            Debug.LogWarning("[Ball Respawn] FALLBACK centro: NO hay jugadores vivos con PlayerObject válido");
+            Debug.LogWarning($"[Ball Respawn {reason}] FALLBACK centro: No hay jugadores válidos");
         }
 
         // Teleport
@@ -174,5 +183,6 @@ public class BallNetwork : NetworkBehaviour
 
         rb.isKinematic = false;
         isRespawning = false;
+        lastActivityTime = Time.time;  // ← Reset al respawnear
     }
 }
