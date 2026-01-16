@@ -1,9 +1,9 @@
-using Unity.Netcode;
+锘縰sing Unity.Netcode;
 using UnityEngine;
 
 public class PlayerPickup : NetworkBehaviour
 {
-    [Header("Configuraci髇")]
+    [Header("Configuraci贸n")]
     public Transform holdPoint;
     public float pickUpRange = 3f;
     public float throwForce = 15f;
@@ -22,21 +22,23 @@ public class PlayerPickup : NetworkBehaviour
         if (heldObject == null)
         {
             if (Input.GetKeyDown(grabKey))
+            {
                 TryGrabBall();
+            }
         }
         else
         {
             if (Input.GetKeyDown(throwKey))
+            {
                 ThrowBallServerRpc(Camera.main.transform.forward * throwForce);
+            }
         }
     }
 
-    void TryGrabBall()
+    private void TryGrabBall()
     {
         Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, pickUpRange, ballLayer))
+        if (Physics.Raycast(ray, out RaycastHit hit, pickUpRange, ballLayer))
         {
             if (hit.collider.TryGetComponent(out NetworkObject netObj))
             {
@@ -45,46 +47,91 @@ public class PlayerPickup : NetworkBehaviour
         }
     }
 
-    [ServerRpc]
-    void RequestGrabServerRpc(ulong networkObjectId)
+    [ServerRpc(RequireOwnership = false)]
+    private void RequestGrabServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects
             .TryGetValue(networkObjectId, out NetworkObject ballNetObj))
             return;
 
-        BallNetwork ball = ballNetObj.GetComponent<BallNetwork>();
-        if (ball == null) return;
+        if (!ballNetObj.TryGetComponent<BallNetwork>(out BallNetwork ball))
+            return;
 
-        // Evitar que dos jugadores la cojan
+        // Evitar doble agarre
         if (ball.isHeld.Value) return;
 
-        ball.SetLastOwner(OwnerClientId);
-        ballNetObj.ChangeOwnership(OwnerClientId);
+        ulong grabberId = rpcParams.Receive.SenderClientId;
 
+        // NO cambiamos ownership de la pelota (queda server-owned)
+        ball.SetLastOwner(grabberId);
         ball.Hold(holdPoint);
 
+        // Guardamos referencia en el jugador que pidi贸 el agarre
         heldObject = ballNetObj;
-        SetHeldObjectClientRpc(networkObjectId);
 
+        // Si es el host (LocalClientId == 0), actualizamos localmente tambi茅n
+        if (grabberId == NetworkManager.Singleton.LocalClientId)
+        {
+            heldObject = ballNetObj;
+        }
+
+        // Enviamos solo al cliente que pidi贸 (no broadcast)
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { grabberId }
+            }
+        };
+
+        SetHeldObjectClientRpc(networkObjectId, clientRpcParams);
     }
 
-    [ServerRpc]
-    void ThrowBallServerRpc(Vector3 force)
+    [ServerRpc(RequireOwnership = false)]
+    private void ThrowBallServerRpc(Vector3 force, ServerRpcParams rpcParams = default)
     {
-        if (heldObject == null) return;
+        ulong throwerId = rpcParams.Receive.SenderClientId;
 
-        BallNetwork ball = heldObject.GetComponent<BallNetwork>();
-        if (ball != null)
+        // Si heldObject es null, intentamos recuperarlo (medida de seguridad)
+        if (heldObject == null)
+        {
+                foreach (var spawned in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
+                {
+                    if (spawned.TryGetComponent<BallNetwork>(out var fallbackBall) && fallbackBall.isHeld.Value)
+                    {
+                        heldObject = spawned;
+                        break;
+                    }
+                }
+
+            if (heldObject == null)
+            {
+                Debug.LogWarning($"[Throw] No se encontr贸 pelota para jugador {throwerId}");
+                return;
+            }
+        }
+
+        if (heldObject.TryGetComponent<BallNetwork>(out BallNetwork ball))
         {
             ball.Release(force);
         }
 
         heldObject = null;
-        ClearHeldObjectClientRpc();
+
+        // Limpiamos solo en el cliente que lanz贸
+        ClientRpcParams clientRpcParams = new ClientRpcParams
+        {
+            Send = new ClientRpcSendParams
+            {
+                TargetClientIds = new ulong[] { throwerId }
+            }
+        };
+
+        ClearHeldObjectClientRpc(clientRpcParams);
     }
 
     [ClientRpc]
-    void SetHeldObjectClientRpc(ulong netId)
+    private void SetHeldObjectClientRpc(ulong netId, ClientRpcParams rpcParams = default)
     {
         if (NetworkManager.Singleton.SpawnManager.SpawnedObjects
             .TryGetValue(netId, out NetworkObject obj))
@@ -94,7 +141,7 @@ public class PlayerPickup : NetworkBehaviour
     }
 
     [ClientRpc]
-    void ClearHeldObjectClientRpc()
+    private void ClearHeldObjectClientRpc(ClientRpcParams rpcParams = default)
     {
         heldObject = null;
     }

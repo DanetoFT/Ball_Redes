@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using TMPro;
 using Unity.Netcode;
 using Unity.Netcode.Components;
 using UnityEngine;
@@ -46,31 +47,42 @@ public class BallNetwork : NetworkBehaviour
         if (IsServer)
         {
             lastOwnerId = NetworkManager.Singleton.LocalClientId;
-            lastActivityTime = Time.time;  // ← Inicial
         }
+        gameObject.SetActive(true);
     }
 
     void Update()
     {
-        if (!IsServer) return;
-
-        // Si está sostenida, seguir
+        // Bloque principal: si está sostenida, TODOS (incluidos clientes) siguen el holdPoint localmente
         if (isHeld.Value && followTarget != null)
         {
-            rb.MovePosition(followTarget.position);
-            rb.MoveRotation(followTarget.rotation);
-            return;
+            // Predicción suave en clientes + server
+            transform.position = followTarget.position;
+            transform.rotation = followTarget.rotation;
+
+            // Si es server → también mueve el Rigidbody (para física correcta)
+            if (IsServer)
+            {
+                rb.MovePosition(followTarget.position);
+                rb.MoveRotation(followTarget.rotation);
+                // Opcional: rb.velocity = Vector3.zero; rb.angularVelocity = Vector3.zero; (ya lo tienes en Hold)
+            }
+
+            return;  // Salimos aquí, no hacemos respawns mientras está held
         }
 
-        // ← PRIORIDAD 1: Respawn por vacío (como antes)
+        // Solo el servidor maneja respawns y lógica física cuando no está held
+        if (!IsServer) return;
+
+        // Respawn por vacío
         if (transform.position.y < voidYThreshold && !isRespawning)
         {
             StartCoroutine(RespawnRoutine("Vacío"));
             return;
         }
 
-        // ← NUEVO: PRIORIDAD 2: Respawn por inactividad
-        if (!isHeld.Value && Time.time - lastActivityTime > inactivityTimeout && !isRespawning)
+        // Respawn por inactividad
+        if (Time.time - lastActivityTime > inactivityTimeout && !isRespawning)
         {
             StartCoroutine(RespawnRoutine("Inactividad"));
             return;
@@ -80,6 +92,7 @@ public class BallNetwork : NetworkBehaviour
     public void Hold(Transform target)
     {
         if (!IsServer) return;
+        Debug.Log("[Hold] Llamado en SERVER - followTarget asignado");
         followTarget = target;
         isHeld.Value = true;
         rb.isKinematic = true;
@@ -95,15 +108,22 @@ public class BallNetwork : NetworkBehaviour
     public void Release(Vector3 throwForce)
     {
         if (!IsServer) return;
+        Debug.Log($"[Release] Llamado en SERVER | isHeld antes: {isHeld.Value} | kinematic: {rb.isKinematic} | force: {throwForce.magnitude}");
         isHeld.Value = false;
         followTarget = null;
+
         if (TryGetComponent(out Collider col))
             col.enabled = true;
-        rb.isKinematic = false;
-        rb.useGravity = true;
-        rb.AddForce(throwForce, ForceMode.Impulse);
 
-        lastActivityTime = Time.time;  // ← RESET TIMER
+        // Orden crítico:
+        rb.isKinematic = false;               // Primero dynamic
+        rb.useGravity = true;
+        rb.linearVelocity = Vector3.zero;           // Limpieza segura
+        rb.angularVelocity = Vector3.zero;
+
+        rb.AddForce(throwForce, ForceMode.Impulse);  // Ahora sí aplica fuerza
+
+        lastActivityTime = Time.time;
     }
 
     public void SetLastOwner(ulong clientId)
@@ -116,17 +136,22 @@ public class BallNetwork : NetworkBehaviour
     private IEnumerator RespawnRoutine(string reason = "Desconocido")
     {
         isRespawning = true;
+
+        // 1. Primero pon kinematic y para velocidades (orden seguro)
+        rb.isKinematic = true;
         rb.linearVelocity = Vector3.zero;
         rb.angularVelocity = Vector3.zero;
-        rb.isKinematic = true;
 
         yield return new WaitForSeconds(tiempoRespawn);
 
-        Vector3 targetPosition = new Vector3(0, 5, 0);
+        // DECLARACIÓN OBLIGATORIA: fallback inicial
+        Vector3 targetPosition = new Vector3(0, 5, 0); // Centro si no hay jugadores
+
         ulong usedId = lastOwnerId;
         bool success = false;
         NetworkClient client = null;
 
+        // Intentamos con el último dueño
         if (NetworkManager.Singleton.ConnectedClients.TryGetValue(lastOwnerId, out client))
         {
             if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
@@ -135,6 +160,7 @@ public class BallNetwork : NetworkBehaviour
             }
         }
 
+        // Si no se encontró → cualquier jugador vivo
         if (!success)
         {
             foreach (var kvp in NetworkManager.Singleton.ConnectedClients)
@@ -153,7 +179,10 @@ public class BallNetwork : NetworkBehaviour
         if (success)
         {
             Transform playerT = client.PlayerObject.transform;
-            Vector3 rayOrigin = playerT.position + playerT.forward * respawnForwardDistance + Vector3.up * raycastHeight;
+
+            Vector3 rayOrigin = playerT.position +
+                                playerT.forward * respawnForwardDistance +
+                                Vector3.up * raycastHeight;
 
             if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastMaxDistance, groundMask))
             {
@@ -164,14 +193,14 @@ public class BallNetwork : NetworkBehaviour
                 targetPosition = playerT.position + Vector3.up * fallbackHeight;
             }
 
-            Debug.Log($"[Ball Respawn {reason}] ÉXITO cerca de {usedId}");
+            Debug.Log($"[Ball Respawn {reason}] ÉXITO cerca de jugador {usedId}");
         }
         else
         {
-            Debug.LogWarning($"[Ball Respawn {reason}] FALLBACK centro: No hay jugadores válidos");
+            Debug.LogWarning($"[Ball Respawn {reason}] FALLBACK al centro: No hay jugadores válidos");
         }
 
-        // Teleport
+        // Teleport usando la variable ya calculada
         if (TryGetComponent(out NetworkTransform netTransform))
         {
             netTransform.Teleport(targetPosition, Quaternion.identity, transform.localScale);
@@ -182,8 +211,14 @@ public class BallNetwork : NetworkBehaviour
             transform.rotation = Quaternion.identity;
         }
 
+        // 2. Volver a dinámica
         rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.linearVelocity = Vector3.zero;           // Limpieza final
+
         isRespawning = false;
-        lastActivityTime = Time.time;  // ← Reset al respawnear
+        lastActivityTime = Time.time;
+
+        Debug.Log($"[Ball Respawn {reason}] Completado - kinematic desactivado");
     }
 }
