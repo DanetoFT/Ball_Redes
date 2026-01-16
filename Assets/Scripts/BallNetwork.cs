@@ -33,6 +33,7 @@ public class BallNetwork : NetworkBehaviour
         NetworkVariableWritePermission.Server
     );
     private Transform followTarget;
+    public ulong GetLastOwnerId() => lastOwnerId;
 
     void Awake()
     {
