@@ -156,7 +156,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 1774202897
+  GlobalObjectIdHash: 2055919545
   InScenePlacedSourceGlobalObjectIdHash: 2055919545
   DeferredDespawnTick: 0
   Ownership: 1
@@ -241,7 +241,7 @@ MonoBehaviour:
   fallbackHeight: 2
   isHeld:
     m_InternalValue: 0
-  holdOffset: {x: 0.87, y: 0.35, z: 0.44}
+  holdOffset: {x: 0.75, y: 0.35, z: 0.44}
 --- !u!114 &-2749707227719716791
 MonoBehaviour:
   m_ObjectHideFlags: 0

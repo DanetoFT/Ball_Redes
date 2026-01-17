@@ -3,7 +3,7 @@ using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 
-public class ScoreUI : NetworkBehaviour
+public class ScoreUI : MonoBehaviour
 {
     [SerializeField] private TextMeshProUGUI scoreText;     // "Jugador 1: X | Jugador 2: Y"
     [SerializeField] private TextMeshProUGUI introText;     // "¡Marca 3 goles para ganar!"
@@ -12,16 +12,12 @@ public class ScoreUI : NetworkBehaviour
 
     private FootballScoreManager scoreManager;
 
-    public override void OnNetworkSpawn()
+    private void Start()
     {
         scoreManager = FootballScoreManager.Instance;
-        canvas.gameObject.SetActive(false);  // Oculto al inicio
-        introText.gameObject.SetActive(false);
-        victoryText.gameObject.SetActive(false);
-
-        scoreManager.scorePlayer1.OnValueChanged += UpdateScoreDisplay;
-        scoreManager.scorePlayer2.OnValueChanged += UpdateScoreDisplay;
+        canvas.gameObject.SetActive(false);
     }
+
 
     private void UpdateScoreDisplay(int prev, int curr)
     {

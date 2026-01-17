@@ -37,7 +37,6 @@ public class PlataformaMovil : NetworkBehaviour
     void Update()
     {
         if (!IsServer) return;
-        if (!activated.Value) return;
 
         if (enPausa)
         {

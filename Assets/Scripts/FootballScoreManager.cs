@@ -18,6 +18,8 @@ public class FootballScoreManager : NetworkBehaviour
     private ulong player1Id, player2Id;  // Server-only
     private bool playersAssigned = false;
 
+    public ScoreUI scoreUI;
+
     public override void OnNetworkSpawn()
     {
         Instance = this;
@@ -83,6 +85,7 @@ public class FootballScoreManager : NetworkBehaviour
         if (score1 >= 3 || score2 >= 3)
         {
             ShowVictoryClientRpc(winnerId == player1Id ? 1 : 2);
+            isMinigameActive.Value = false;
             StartCoroutine(ResetMinigame(5f));  // Reset en 5s
         }
     }
@@ -102,9 +105,9 @@ public class FootballScoreManager : NetworkBehaviour
     [ClientRpc]
     private void ShowIntroClientRpc()
     {
-        // Busca el UI (o referencia directa)
-        FindObjectOfType<ScoreUI>()?.ShowIntro();
+        scoreUI.ShowIntro();
     }
+
 
     [ClientRpc]
     private void HideIntroClientRpc()
