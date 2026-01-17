@@ -4,7 +4,6 @@ public class PauseMenuManager : MonoBehaviour
 {
     public GameObject pauseMenuHolderObject;
     public bool isPaused;
-    // Update is called once per frame
     private void Start()
     {
         ClosePauseMenu();

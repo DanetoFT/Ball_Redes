@@ -67,8 +67,6 @@ public class MinigameTrigger : NetworkBehaviour
 
         Debug.Log($"[Minigame] START → P1:{id1} vs P2:{id2}");
     }
-
-    // 👇 OPCIONAL pero MUY recomendado
     public void ResetTrigger()
     {
         playersInside.Clear();

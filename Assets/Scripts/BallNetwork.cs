@@ -34,8 +34,7 @@ public class BallNetwork : NetworkBehaviour
     );
     private Transform followTarget;
 
-    // Offset fijo para la posición relativa (ajusta estos valores)
-    [SerializeField] private Vector3 holdOffset = new Vector3(0.87f, 0.35f, 0.44f); // Derecha, arriba, delante
+    [SerializeField] private Vector3 holdOffset = new Vector3(0.87f, 0.35f, 0.44f);
 
     public ulong GetLastOwnerId() => lastOwnerId;
 
@@ -59,11 +58,9 @@ public class BallNetwork : NetworkBehaviour
     {
         if (isHeld.Value && followTarget != null)
         {
-            // Predicción fuerte en clientes: fuerza posición/rotación cada frame
             transform.position = followTarget.position + followTarget.rotation * holdOffset;
             transform.rotation = followTarget.rotation;
 
-            // Limpieza física en todos
             rb.isKinematic = true;
             rb.useGravity = false;
             rb.linearVelocity = Vector3.zero;
@@ -83,14 +80,12 @@ public class BallNetwork : NetworkBehaviour
 
         if (!IsServer) return;
 
-        // Respawn por vacío
         if (transform.position.y < voidYThreshold && !isRespawning)
         {
             StartCoroutine(RespawnRoutine("Vacío"));
             return;
         }
 
-        // Respawn por inactividad
         if (Time.time - lastActivityTime > inactivityTimeout && !isRespawning)
         {
             StartCoroutine(RespawnRoutine("Inactividad"));
@@ -102,7 +97,6 @@ public class BallNetwork : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        // Chequea si holdPoint tiene NetworkObject
         if (!holdPointTransform.TryGetComponent<NetworkObject>(out var holdPointNetObj))
         {
             Debug.LogError("HoldPoint debe tener NetworkObject para parenting");
@@ -120,7 +114,6 @@ public class BallNetwork : NetworkBehaviour
         if (TryGetComponent(out Collider col))
             col.enabled = false;
 
-        // Parenting con NGO
         if (!TryGetComponent<NetworkObject>(out var ballNetObj))
         {
             Debug.LogError("Pelota debe tener NetworkObject");
@@ -133,7 +126,6 @@ public class BallNetwork : NetworkBehaviour
             return;
         }
 
-        // Reset local para pegar al holdPoint
         transform.localPosition = Vector3.zero;
         transform.localRotation = Quaternion.identity;
 
@@ -147,7 +139,6 @@ public class BallNetwork : NetworkBehaviour
         isHeld.Value = false;
         followTarget = null;
 
-        // Quitar parentesco (mantiene posición mundial actual)
         transform.SetParent(null, true);
 
         if (TryGetComponent(out Collider col))

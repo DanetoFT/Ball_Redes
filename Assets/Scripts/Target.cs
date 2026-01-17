@@ -56,15 +56,11 @@ public class Target : NetworkBehaviour
         bool isOpen = doorObject.transform.localPosition.y > closedPosition.y + openHeight * 0.5f;
         Vector3 targetPos = isOpen ? closedPosition : closedPosition + Vector3.up * openHeight;
 
-        // Guardamos la posición inicial y final para enviarla a todos
         Vector3 currentPos = doorObject.transform.localPosition;
 
-        // Inmediatamente cambiamos al estado final en el servidor (para física/collisions)
         doorObject.transform.localPosition = targetPos;
 
-        // Enviamos la animación a TODOS los clientes (incluido el servidor si quieres consistencia)
         AnimateDoorClientRpc(currentPos, targetPos);
-        // En ToggleDoor, después de AnimateDoorClientRpc:
         if (IsServer)
         {
             StartCoroutine(AnimateDoorLocally(currentPos, targetPos));
@@ -74,7 +70,6 @@ public class Target : NetworkBehaviour
     [ClientRpc]
     private void AnimateDoorClientRpc(Vector3 startPos, Vector3 endPos)
     {
-        // Esta corrutina se ejecuta en TODOS los clientes
         StartCoroutine(AnimateDoorLocally(startPos, endPos));
     }
 

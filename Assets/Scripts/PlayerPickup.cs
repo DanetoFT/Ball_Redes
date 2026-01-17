@@ -17,7 +17,7 @@ public class PlayerPickup : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return;  // ← BLOQUEA INPUTS
+        if (!IsOwner) return;
 
         if (heldObject == null)
         {
@@ -50,28 +50,24 @@ public class PlayerPickup : NetworkBehaviour
     {
         ulong grabberId = rpcParams.Receive.SenderClientId;
 
-        // 1. Declaramos ballNetObj aquí (resultado de la búsqueda por ID)
         if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out NetworkObject ballNetObj))
         {
             Debug.LogWarning($"[RequestGrab] No se encontró NetworkObject con ID {networkObjectId}");
             return;
         }
 
-        // 2. Declaramos ball aquí (componente BallNetwork del objeto encontrado)
         if (!ballNetObj.TryGetComponent<BallNetwork>(out BallNetwork ball))
         {
             Debug.LogWarning("[RequestGrab] El objeto no tiene componente BallNetwork");
             return;
         }
 
-        // Ya podemos usar ball y ballNetObj con seguridad
         if (ball.isHeld.Value)
         {
             Debug.Log("[RequestGrab] Pelota ya está siendo sostenida");
             return;
         }
 
-        // Buscamos el PlayerObject del que pidió agarrar
         if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(grabberId, out NetworkClient client) ||
             client.PlayerObject == null)
         {
@@ -79,7 +75,6 @@ public class PlayerPickup : NetworkBehaviour
             return;
         }
 
-        // Buscamos el holdPoint (ruta ajusta según tu jerarquía)
         Transform holdPoint = client.PlayerObject.transform.Find("Camera/HoldPoint");
         if (holdPoint == null)
         {
@@ -90,11 +85,10 @@ public class PlayerPickup : NetworkBehaviour
         Debug.Log($"[SERVER] HoldPoint encontrado para jugador {grabberId} | Pos: {holdPoint.position}");
 
         ball.SetLastOwner(grabberId);
-        ball.Hold(holdPoint);  // Pasamos el holdPoint real
+        ball.Hold(holdPoint);
 
         heldObject = ballNetObj;
 
-        // Si es el host, actualizamos localmente también
         if (grabberId == NetworkManager.Singleton.LocalClientId)
         {
             heldObject = ballNetObj;
@@ -113,7 +107,6 @@ public class PlayerPickup : NetworkBehaviour
     {
         ulong throwerId = rpcParams.Receive.SenderClientId;
 
-        // Si heldObject es null, intentamos recuperarlo (medida de seguridad)
         if (heldObject == null)
         {
                 foreach (var spawned in NetworkManager.Singleton.SpawnManager.SpawnedObjectsList)
@@ -139,7 +132,6 @@ public class PlayerPickup : NetworkBehaviour
 
         heldObject = null;
 
-        // Limpiamos solo en el cliente que lanzó
         ClientRpcParams clientRpcParams = new ClientRpcParams
         {
             Send = new ClientRpcSendParams

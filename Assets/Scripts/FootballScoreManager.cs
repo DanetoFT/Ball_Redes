@@ -1,21 +1,20 @@
-﻿// 4. FootballScoreManager.cs - Singleton NetworkBehaviour (ponlo en un GameObject vacío)
-using System.Collections;
+﻿using System.Collections;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SocialPlatforms.Impl;
 
 public class FootballScoreManager : NetworkBehaviour
 {
-    public static FootballScoreManager Instance;  // Singleton
+    public static FootballScoreManager Instance;
 
     [Header("Scores")]
-    public NetworkVariable<int> scorePlayer1 = new(0);  // Sincronizado
+    public NetworkVariable<int> scorePlayer1 = new(0);
     public NetworkVariable<int> scorePlayer2 = new(0);
 
     [Header("Estado")]
     public NetworkVariable<bool> isMinigameActive = new(false);
 
-    private ulong player1Id, player2Id;  // Server-only
+    private ulong player1Id, player2Id;
     private bool playersAssigned = false;
 
     public ScoreUI scoreUI;
@@ -23,13 +22,6 @@ public class FootballScoreManager : NetworkBehaviour
     public override void OnNetworkSpawn()
     {
         Instance = this;
-        scorePlayer1.OnValueChanged += OnScoreChanged;
-        scorePlayer2.OnValueChanged += OnScoreChanged;
-    }
-
-    private void OnScoreChanged(int previous, int current)
-    {
-        // Opcional: Efectos por gol
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -40,23 +32,22 @@ public class FootballScoreManager : NetworkBehaviour
 
     public void StartMinigameServer(ulong id1, ulong id2)
     {
-        player1Id = id1;  // Menor ID = Player1
-        player2Id = id2;  // Mayor ID = Player2
+        player1Id = id1;
+        player2Id = id2;
         playersAssigned = true;
 
         scorePlayer1.Value = 0;
         scorePlayer2.Value = 0;
         isMinigameActive.Value = true;
 
-        // ¡Activa Canvas y muestra texto 2s!
         StartCoroutine(ShowIntroText());
     }
 
     private IEnumerator ShowIntroText()
     {
-        ShowIntroClientRpc();  // Muestra texto
+        ShowIntroClientRpc();
         yield return new WaitForSeconds(2f);
-        HideIntroClientRpc();  // Oculta
+        HideIntroClientRpc();
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -86,7 +77,7 @@ public class FootballScoreManager : NetworkBehaviour
         {
             ShowVictoryClientRpc(winnerId == player1Id ? 1 : 2);
             isMinigameActive.Value = false;
-            StartCoroutine(ResetMinigame(5f));  // Reset en 5s
+            StartCoroutine(ResetMinigame(5f));
         }
     }
 
@@ -97,7 +88,7 @@ public class FootballScoreManager : NetworkBehaviour
         scorePlayer2.Value = 0;
         isMinigameActive.Value = false;
         playersAssigned = false;
-        HideCanvasClientRpc();  // Opcional: oculta canvas
+        HideCanvasClientRpc();
         Debug.Log("[Minigame] ¡RESET!");
     }
 

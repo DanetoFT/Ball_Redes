@@ -30,7 +30,7 @@ public class FirstPersonLook : NetworkBehaviour
     void Update()
     {
         if (!IsOwner) return;
-        if (pauseMenu != null && pauseMenu.isPaused) return; // 👈 BLOQUEO
+        if (pauseMenu != null && pauseMenu.isPaused) return;
 
         float mouseX = Input.GetAxis("Mouse X") * sensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * sensitivity;

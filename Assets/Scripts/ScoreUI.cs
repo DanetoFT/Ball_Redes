@@ -1,14 +1,13 @@
-// 5. ScoreUI.cs - Ponlo en tu CANVAS (NetworkObject + UICanvas o similar)
 using TMPro;
 using Unity.Netcode;
 using UnityEngine;
 
 public class ScoreUI : MonoBehaviour
 {
-    [SerializeField] private TextMeshProUGUI scoreText;     // "Jugador 1: X | Jugador 2: Y"
-    [SerializeField] private TextMeshProUGUI introText;     // "¡Marca 3 goles para ganar!"
-    [SerializeField] private TextMeshProUGUI victoryText;   // "¡Jugador X gana!"
-    [SerializeField] private GameObject canvas;                 // El Canvas padre
+    [SerializeField] private TextMeshProUGUI scoreText;
+    [SerializeField] private TextMeshProUGUI introText;
+    [SerializeField] private TextMeshProUGUI victoryText;
+    [SerializeField] private GameObject canvas;
 
     private FootballScoreManager scoreManager;
 
