@@ -25,7 +25,7 @@ public class PauseMenuManager : MonoBehaviour
     }
     public void ShowPauseMenu()
     {
-        Cursor.lockState = CursorLockMode.Confined;
+        Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
         pauseMenuHolderObject.SetActive(true);
         isPaused = true;
@@ -46,6 +46,7 @@ public class PauseMenuManager : MonoBehaviour
     {
         Application.Quit();
     }
+
     [ServerRpc(RequireOwnership = false)]
     public void LoadNewSceneServerRPC(string newSceneToLoad)
     {

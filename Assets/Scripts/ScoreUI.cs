@@ -8,16 +8,17 @@ public class ScoreUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI scoreText;     // "Jugador 1: X | Jugador 2: Y"
     [SerializeField] private TextMeshProUGUI introText;     // "¡Marca 3 goles para ganar!"
     [SerializeField] private TextMeshProUGUI victoryText;   // "¡Jugador X gana!"
-    [SerializeField] private Canvas canvas;                 // El Canvas padre
+    [SerializeField] private GameObject canvas;                 // El Canvas padre
 
     private FootballScoreManager scoreManager;
+
+    public static ScoreUI Instance;
 
     private void Start()
     {
         scoreManager = FootballScoreManager.Instance;
         canvas.gameObject.SetActive(false);
     }
-
 
     private void UpdateScoreDisplay(int prev, int curr)
     {
@@ -26,8 +27,9 @@ public class ScoreUI : MonoBehaviour
 
     public void ShowIntro()
     {
-        introText.gameObject.SetActive(true);
         canvas.gameObject.SetActive(true);
+        introText.gameObject.SetActive(true);
+        Debug.Log($"[UI] Mostrando intro en cliente {NetworkManager.Singleton.LocalClientId}");
     }
 
     public void HideIntro()

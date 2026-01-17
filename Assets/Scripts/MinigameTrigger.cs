@@ -12,38 +12,42 @@ public class MinigameTrigger : NetworkBehaviour
     {
         if (!IsServer) return;
 
-        if (!other.transform.root.TryGetComponent<NetworkObject>(out var netObj))
-            return;
-
-        if (!netObj.IsPlayerObject)
+        var netObj = other.GetComponentInParent<NetworkObject>();
+        if (netObj == null || !netObj.IsPlayerObject)
             return;
 
         ulong clientId = netObj.OwnerClientId;
 
         if (playersInside.Add(clientId))
         {
-            Debug.Log($"[Trigger] Player {clientId} entró. Total: {playersInside.Count}");
+            Debug.Log($"[Trigger] Jugador {clientId} dentro. Total: {playersInside.Count}");
             CheckStartMinigame();
         }
     }
+
+
+    [ClientRpc]
+    private void ShowMinigameHintClientRpc(ClientRpcParams rpcParams = default)
+    {
+        ScoreUI.Instance?.ShowIntro();
+    }
+
+
 
     private void OnTriggerExit(Collider other)
     {
         if (!IsServer) return;
 
-        if (!other.transform.root.TryGetComponent<NetworkObject>(out var netObj))
-            return;
-
-        if (!netObj.IsPlayerObject)
+        var netObj = other.GetComponentInParent<NetworkObject>();
+        if (netObj == null || !netObj.IsPlayerObject)
             return;
 
         ulong clientId = netObj.OwnerClientId;
 
         if (playersInside.Remove(clientId))
-        {
-            Debug.Log($"[Trigger] Player {clientId} salió. Total: {playersInside.Count}");
-        }
+            Debug.Log($"[Trigger] Jugador {clientId} salió. Total: {playersInside.Count}");
     }
+
 
     private void CheckStartMinigame()
     {
