@@ -1,14 +1,11 @@
 using Unity.Netcode;
 using UnityEngine;
-
 public class PauseMenuManager : MonoBehaviour
 {
     public GameObject pauseMenuHolderObject;
     public bool isPaused;
-
-    // Update is called once per frame
-
-    private void Start()
+    // Update is called once per frame
+    private void Start()
     {
         ClosePauseMenu();
     }
@@ -26,16 +23,14 @@ public class PauseMenuManager : MonoBehaviour
             }
         }
     }
-
     public void ShowPauseMenu()
     {
         Cursor.lockState = CursorLockMode.Confined;
         Cursor.visible = true;
         pauseMenuHolderObject.SetActive(true);
         isPaused = true;
-        
-    }
 
+    }
     public void ClosePauseMenu()
     {
         Cursor.lockState = CursorLockMode.Locked;
@@ -43,17 +38,14 @@ public class PauseMenuManager : MonoBehaviour
         pauseMenuHolderObject.SetActive(false);
         isPaused = false;
     }
-
     public void DisconnectFromGame()
     {
         NetworkManager.Singleton.Shutdown();
     }
-
     public void ExitGame()
     {
         Application.Quit();
     }
-
     [ServerRpc(RequireOwnership = false)]
     public void LoadNewSceneServerRPC(string newSceneToLoad)
     {

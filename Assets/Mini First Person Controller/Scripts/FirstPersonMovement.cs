@@ -33,7 +33,7 @@ public class FirstPersonMovement : NetworkBehaviour
 
     void FixedUpdate()
     {
-        if (NetworkManager.Singleton.LocalClientId != myNetworkObject.OwnerClientId || pause.isPaused)
+        if (NetworkManager.Singleton.LocalClientId != myNetworkObject.OwnerClientId)
         {
             return;
         }

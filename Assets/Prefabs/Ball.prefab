@@ -156,7 +156,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2055919545
+  GlobalObjectIdHash: 1774202897
   InScenePlacedSourceGlobalObjectIdHash: 2055919545
   DeferredDespawnTick: 0
   Ownership: 1
@@ -229,18 +229,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
   voidYThreshold: -10
-  tiempoRespawn: 2
+  tiempoRespawn: 0.5
   inactivityTimeout: 7
   respawnForwardDistance: 4
   groundMask:
     serializedVersion: 2
-    m_Bits: 136
+    m_Bits: 8
   raycastHeight: 10
   raycastMaxDistance: 20
   spawnAboveGroundOffset: 0.1
   fallbackHeight: 2
   isHeld:
     m_InternalValue: 0
+  holdOffset: {x: 0.87, y: 0.35, z: 0.44}
 --- !u!114 &-2749707227719716791
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -257,4 +258,4 @@ MonoBehaviour:
   NetworkRigidbodyBaseExpanded: 0
   UseRigidBodyForMotion: 0
   AutoUpdateKinematicState: 1
-  AutoSetKinematicOnDespawn: 1
+  AutoSetKinematicOnDespawn: 0

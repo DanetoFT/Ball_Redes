@@ -17,14 +17,12 @@ public class PlayerPickup : NetworkBehaviour
 
     void Update()
     {
-        if (!IsOwner) return;
+        if (!IsOwner) return;  // ← BLOQUEA INPUTS
 
         if (heldObject == null)
         {
             if (Input.GetKeyDown(grabKey))
-            {
                 TryGrabBall();
-            }
         }
         else
         {
@@ -50,38 +48,61 @@ public class PlayerPickup : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     private void RequestGrabServerRpc(ulong networkObjectId, ServerRpcParams rpcParams = default)
     {
-        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects
-            .TryGetValue(networkObjectId, out NetworkObject ballNetObj))
-            return;
-
-        if (!ballNetObj.TryGetComponent<BallNetwork>(out BallNetwork ball))
-            return;
-
-        // Evitar doble agarre
-        if (ball.isHeld.Value) return;
-
         ulong grabberId = rpcParams.Receive.SenderClientId;
 
-        // NO cambiamos ownership de la pelota (queda server-owned)
-        ball.SetLastOwner(grabberId);
-        ball.Hold(holdPoint);
+        // 1. Declaramos ballNetObj aquí (resultado de la búsqueda por ID)
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out NetworkObject ballNetObj))
+        {
+            Debug.LogWarning($"[RequestGrab] No se encontró NetworkObject con ID {networkObjectId}");
+            return;
+        }
 
-        // Guardamos referencia en el jugador que pidió el agarre
+        // 2. Declaramos ball aquí (componente BallNetwork del objeto encontrado)
+        if (!ballNetObj.TryGetComponent<BallNetwork>(out BallNetwork ball))
+        {
+            Debug.LogWarning("[RequestGrab] El objeto no tiene componente BallNetwork");
+            return;
+        }
+
+        // Ya podemos usar ball y ballNetObj con seguridad
+        if (ball.isHeld.Value)
+        {
+            Debug.Log("[RequestGrab] Pelota ya está siendo sostenida");
+            return;
+        }
+
+        // Buscamos el PlayerObject del que pidió agarrar
+        if (!NetworkManager.Singleton.ConnectedClients.TryGetValue(grabberId, out NetworkClient client) ||
+            client.PlayerObject == null)
+        {
+            Debug.LogWarning($"[RequestGrab] No se encontró PlayerObject para jugador {grabberId}");
+            return;
+        }
+
+        // Buscamos el holdPoint (ruta ajusta según tu jerarquía)
+        Transform holdPoint = client.PlayerObject.transform.Find("Camera/HoldPoint");
+        if (holdPoint == null)
+        {
+            Debug.LogError($"[RequestGrab] No se encontró HoldPoint en jugador {grabberId}");
+            return;
+        }
+
+        Debug.Log($"[SERVER] HoldPoint encontrado para jugador {grabberId} | Pos: {holdPoint.position}");
+
+        ball.SetLastOwner(grabberId);
+        ball.Hold(holdPoint);  // Pasamos el holdPoint real
+
         heldObject = ballNetObj;
 
-        // Si es el host (LocalClientId == 0), actualizamos localmente también
+        // Si es el host, actualizamos localmente también
         if (grabberId == NetworkManager.Singleton.LocalClientId)
         {
             heldObject = ballNetObj;
         }
 
-        // Enviamos solo al cliente que pidió (no broadcast)
         ClientRpcParams clientRpcParams = new ClientRpcParams
         {
-            Send = new ClientRpcSendParams
-            {
-                TargetClientIds = new ulong[] { grabberId }
-            }
+            Send = new ClientRpcSendParams { TargetClientIds = new ulong[] { grabberId } }
         };
 
         SetHeldObjectClientRpc(networkObjectId, clientRpcParams);
