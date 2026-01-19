@@ -28,8 +28,7 @@ public class BreakableWall : NetworkBehaviour
         if (oneTimeOnly && broken) return;
         broken = true;
 
-        wallCollider.enabled = false;
-        if (wallRenderer) wallRenderer.enabled = false;
+        
 
         ContactPoint contact = collision.GetContact(0);
         SpawnShardsClientRpc(contact.point, contact.normal, collision.relativeVelocity.magnitude);
@@ -46,6 +45,8 @@ public class BreakableWall : NetworkBehaviour
     {
         System.Random syncedRandom = new System.Random((int)(NetworkManager.Singleton.ServerTime.Time * 1000L));
 
+        wallCollider.enabled = false;
+        if (wallRenderer) wallRenderer.enabled = false;
         float scatterRadius = 0.5f;
 
         for (int i = 0; i < numShards; i++)
