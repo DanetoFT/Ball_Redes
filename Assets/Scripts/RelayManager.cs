@@ -37,6 +37,12 @@ public class RelayManager : MonoBehaviour
 
     public async void CreateRoom()
     {
+        if (mainMenu != null && mainMenu.playerName_Input != null)
+        {
+            string name = mainMenu.playerName_Input.text;
+            UserListManager.Singleton.localUserName = string.IsNullOrEmpty(name) ? "Host" : name;
+        }
+
         string joinCode = await StartHostWithRelay();
 
         if (!string.IsNullOrEmpty(joinCode))
@@ -50,6 +56,12 @@ public class RelayManager : MonoBehaviour
 
     public async void JoinRoom()
     {
+        if (mainMenu != null && mainMenu.playerName_Input != null)
+        {
+            string name = mainMenu.playerName_Input.text;
+            UserListManager.Singleton.localUserName = string.IsNullOrEmpty(name) ? "Client" : name;
+        }
+
         await StartClientWithRelay(roomCodeInput.text);
         roomCodeText.text = roomCodeInput.text;
     }

@@ -34,11 +34,15 @@ public class UserListManager : NetworkBehaviour
     {
         DontDestroyOnLoad(this.gameObject);
         userConnectedList = new List<UserConnectedData>();
-        NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnectedMethod;
+        NetworkManager.Singleton.OnClientStopped += (isHost) => {
+            userConnectedList.Clear();
+        };
     }
+
     public override void OnNetworkSpawn()
     {
-        //base.OnNetworkSpawn();
+        if (string.IsNullOrEmpty(localUserName)) localUserName = "Player1" + UnityEngine.Random.Range(10, 99);
+
         AddNewUserServerRPC(NetworkManager.Singleton.LocalClientId, localUserName);
     }
     private void OnClientDisconnectedMethod(ulong userID)

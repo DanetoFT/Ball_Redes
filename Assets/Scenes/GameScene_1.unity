@@ -5078,6 +5078,30 @@ PrefabInstance:
       propertyPath: m_Name
       value: Curva1Bien (13)
       objectReference: {fileID: 0}
+    - target: {fileID: 5389443521596042633, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 7356464474491412724, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Size.x
+      value: 35.136425
+      objectReference: {fileID: 0}
+    - target: {fileID: 7356464474491412724, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Size.y
+      value: 2.4185088
+      objectReference: {fileID: 0}
+    - target: {fileID: 7356464474491412724, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Center.x
+      value: -17.068214
+      objectReference: {fileID: 0}
+    - target: {fileID: 7356464474491412724, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Center.y
+      value: 1.6596386
+      objectReference: {fileID: 0}
+    - target: {fileID: 7356464474491412724, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
+      propertyPath: m_Center.z
+      value: -0.000000012831166
+      objectReference: {fileID: 0}
     - target: {fileID: 7896278516673625105, guid: 53dc55e895cdfaa4ab4336ca3c55faae, type: 3}
       propertyPath: m_LocalPosition.x
       value: 96.19
@@ -10510,6 +10534,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 475354141996407274, guid: 0b54e44c68ebd374386da0d2969f7647, type: 3}
+      propertyPath: m_Layer
+      value: 8
+      objectReference: {fileID: 0}
     - target: {fileID: 2077526992653787942, guid: 0b54e44c68ebd374386da0d2969f7647, type: 3}
       propertyPath: m_Name
       value: Cuesta1 (4)
@@ -11423,7 +11451,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Target
   ShowTopMostFoldoutHeaderGroup: 1
-  doorObject: {fileID: 1529333946}
+  doorObject: {fileID: 812971610}
   openHeight: 2
   animationTime: 1
   oneTimeOnly: 1

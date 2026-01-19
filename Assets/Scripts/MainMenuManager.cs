@@ -32,7 +32,8 @@ public class MainMenuManager : MonoBehaviour
 
     public void ConnectAsHost()
     {
-        UserListManager.Singleton.localUserName = playerName_Input.text;
+        string name = string.IsNullOrEmpty(playerName_Input.text) ? "HostPlayer" : playerName_Input.text;
+        UserListManager.Singleton.localUserName = name;
 
         if (SetConnectionData())
         {
@@ -42,7 +43,8 @@ public class MainMenuManager : MonoBehaviour
 
     public void ConnectAsClient()
     {
-        UserListManager.Singleton.localUserName = playerName_Input.text;
+        string name = string.IsNullOrEmpty(playerName_Input.text) ? "ClientPlayer" : playerName_Input.text;
+        UserListManager.Singleton.localUserName = name;
 
         if (SetConnectionData())
         {

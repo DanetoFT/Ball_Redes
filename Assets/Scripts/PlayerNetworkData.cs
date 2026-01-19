@@ -5,9 +5,9 @@ using UnityEngine;
 
 public class PlayerNetworkData : NetworkBehaviour
 {
-    public NetworkVariable<FixedString64Bytes> playerName =
+    public NetworkVariable<FixedString64Bytes> playerName = 
         new NetworkVariable<FixedString64Bytes>(
-            writePerm: NetworkVariableWritePermission.Owner);
+            writePerm: NetworkVariableWritePermission.Server);
 
     [SerializeField] private TMP_Text nameText;
     [SerializeField] private GameObject nameTagRoot;
@@ -16,34 +16,37 @@ public class PlayerNetworkData : NetworkBehaviour
     {
         if (IsOwner)
         {
-            playerName.Value = UserListManager.Singleton.localUserName;
-        }
-
-        if (IsOwner)
-        {
+            string myName = UserListManager.Singleton.localUserName;
+            UpdateNameServerRpc(myName);
             nameTagRoot.SetActive(false);
         }
         else
         {
-            UpdateName(playerName.Value.ToString());
+            UpdateNameVisuals(playerName.Value.ToString());
         }
 
         playerName.OnValueChanged += OnNameChanged;
     }
 
-    private void OnDestroy()
+    [ServerRpc]
+    private void UpdateNameServerRpc(string name)
     {
-        playerName.OnValueChanged -= OnNameChanged;
+        playerName.Value = name;
     }
 
     private void OnNameChanged(FixedString64Bytes oldValue, FixedString64Bytes newValue)
     {
-        UpdateName(newValue.ToString());
+        UpdateNameVisuals(newValue.ToString());
     }
 
-    private void UpdateName(string newName)
+    private void UpdateNameVisuals(string newName)
     {
         if (string.IsNullOrEmpty(newName)) return;
-        nameText.text = newName;
+        if (nameText != null) nameText.text = newName;
+    }
+
+    private void OnDestroy()
+    {
+        playerName.OnValueChanged -= OnNameChanged;
     }
 }
